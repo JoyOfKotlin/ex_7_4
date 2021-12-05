@@ -10,6 +10,23 @@ import java.io.Serializable
 sealed class Result<out A>: Serializable {
     abstract fun <B> map(f: (A)->B): Result<B>
     abstract fun <B> flatMap(f:(A)->Result<B>): Result <B>
+    abstract fun mapFailure(message:String): Result<A>
+
+    fun filter(p:(A)-> Boolean): Result<A> =
+        flatMap {
+        if (p(it))  this
+        else failure("Condition not matched")
+    }
+
+    fun filter(message: String, p: (A)-> Boolean): Result<A> =
+        flatMap {
+            if (p(it)) this
+            else failure(message)
+        }
+
+    fun exists(p: (A) -> Boolean): Boolean = map(p).getOrElse(false)
+
+
 
     fun getOrElse(defaultValue: @UnsafeVariance A): A = when (this) {
         is Success -> this.value
@@ -35,12 +52,15 @@ sealed class Result<out A>: Serializable {
         }
 
     internal object Empty: Result<Nothing>(){
+        override fun mapFailure(message: String) : Result<Nothing> = this
         override fun <B> map(f: (Nothing)->B): Result<B> = Empty
         override fun <B> flatMap(f:(Nothing)->Result<B>) : Result<B> = Empty
         override fun toString(): String = "Empty"
     }
 
     internal class Failure<out A>(internal val exception: RuntimeException): Result<A>() {
+        override fun mapFailure(message: String): Result <A> = this
+        
         override fun <B> map(f:(A)->B): Result<B> = Failure(exception)
         override fun <B> flatMap(f:(A)->Result<B>) : Result<B> = Failure(exception)
 
@@ -49,6 +69,7 @@ sealed class Result<out A>: Serializable {
         }
     
     internal class Success<out A> (internal val value: A) : Result<A>() {
+        override fun mapFailure(message: String) : Result<A> = this
         override fun <B> map(f: (A) -> B): Result<B> =
             try {
                 Success(f(value))
