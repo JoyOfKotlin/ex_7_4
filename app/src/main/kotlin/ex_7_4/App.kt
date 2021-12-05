@@ -60,7 +60,7 @@ sealed class Result<out A>: Serializable {
 
     internal class Failure<out A>(internal val exception: RuntimeException): Result<A>() {
         override fun mapFailure(message: String): Result <A> = this
-        
+
         override fun <B> map(f:(A)->B): Result<B> = Failure(exception)
         override fun <B> flatMap(f:(A)->Result<B>) : Result<B> = Failure(exception)
 
